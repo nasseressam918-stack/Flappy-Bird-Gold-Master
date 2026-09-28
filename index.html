@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Flappy Bird Gold Master Perfect Edition</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    body {
+      background: #050508;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+    #game-wrapper {
+      position: relative;
+      width: 400px;
+      height: 680px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 242, 254, 0.2);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Optimized Button Positions (UX First: Pause Top, Settings Below) */
+    #manual-pause-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 10;
+      pointer-events: auto;
+    }
+
+    #settings-btn {
+      position: absolute;
+      top: 65px;
+      left: 15px;
+      z-index: 10;
+      pointer-events: auto;
+    }
+
+    .icon-btn {
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: transform 0.1s ease, background 0.2s ease;
+    }
+    .icon-btn:active { transform: scale(0.92); }
+
+    .shop-btn {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 32px;
+      background: linear-gradient(135deg, #ffd700, #ff8800);
+      color: #000;
+      font-weight: 900;
+      font-size: 16px;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
+      z-index: 10;
+      display: none;
+    }
+
+    /* Modals Overlay */
+    .modal-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10, 10, 20, 0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 15px;
+      color: white;
+      z-index: 30;
+      overflow-y: auto;
+    }
+    .modal-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 0 5px;
+    }
+    .modal-title { font-size: 22px; font-weight: 900; color: #ffd700; }
+    .shop-coins { font-size: 16px; font-weight: bold; color: #00f2fe; }
+    .shop-section { width: 100%; margin-bottom: 15px; }
+    .section-title { font-size: 12px; text-transform: uppercase; color: #aaa; margin-bottom: 8px; text-align: right; }
+    .shop-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .shop-item {
+      background: #161622; border: 2px solid #2a2a3c; border-radius: 14px;
+      padding: 10px; text-align: center; width: 100px; cursor: pointer; transition: all 0.2s ease;
+    }
+    .shop-item.active { border-color: #00f2fe; background: #0b2233; box-shadow: 0 0 12px rgba(0,242,254,0.3); }
+    .item-name { font-size: 12px; font-weight: bold; margin-top: 5px; }
+    .item-cost { font-size: 11px; color: #ffd700; margin-top: 4px; }
+
+    /* Settings Styles */
+    .settings-list {
+      width: 100%; display: flex; flex-direction: column; gap: 12px; margin-top: 10px;
+    }
+    .setting-row {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #161622; padding: 12px 16px; border-radius: 12px; border: 1px solid #2a2a3c;
+    }
+    .setting-label { font-size: 14px; font-weight: bold; }
+    .btn-action {
+      padding: 8px 16px; background: #00f2fe; color: #000; font-weight: bold;
+      border: none; border-radius: 8px; cursor: pointer; transition: 0.1s;
+    }
+    .btn-action:active { transform: scale(0.95); }
+    .btn-danger { background: #e74c3c; color: white; }
+
+    /* Revive Circular Timer Modal */
+    #revive-modal {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 5, 25, 0.92);
+      display: none; flex-direction: column;
+      justify-content: center; align-items: center;
+      z-index: 40; backdrop-filter: blur(8px);
+    }
+    .revive-box {
+      text-align: center; background: #1a0933; border: 2px solid #9b59b6;
+      padding: 25px; border-radius: 20px; box-shadow: 0 0 30px rgba(155, 89, 182, 0.5);
+      width: 80%; display: flex; flex-direction: column; align-items: center;
+    }
+    
+    .radial-timer-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      margin: 15px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+    .radial-svg {
+      transform: rotate(-90deg);
+      width: 120px;
+      height: 120px;
+    }
+    .radial-bg {
+      fill: none;
+      stroke: #2c1654;
+      stroke-width: 10;
+    }
+    .radial-progress {
+      fill: none;
+      stroke: #f1c40f;
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 314;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.1s linear;
+    }
+    .radial-center-btn {
+      position: absolute;
+      width: 85px;
+      height: 85px;
+      background: linear-gradient(135deg, #27ae60, #2ecc71);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 15px rgba(46, 204, 113, 0.6);
+      font-size: 32px;
+      transition: transform 0.1s;
+    }
+    .radial-center-btn:active { transform: scale(0.92); }
+    
+    .close-btn-generic {
+      margin-top: auto; padding: 12px 40px;
+      background: linear-gradient(135deg, #e74c3c, #c0392b); border: none; color: white;
+      font-weight: 800; border-radius: 25px; cursor: pointer;
+      box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+    }
+
+    @keyframes toastFade {
+      0% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
+      15% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      85% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-wrapper">
+    <!-- UI Buttons Positioned Top Left (Pause above Settings) -->
+    <button id="manual-pause-btn" class="icon-btn">⏸️</button>
+    <button id="settings-btn" class="icon-btn">⚙️</button>
+
+    <canvas id="canvas" width="400" height="680"></canvas>
+    <button id="open-shop-btn" class="shop-btn">المتجر 🛒</button>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+      <div class="modal-header">
+        <div class="modal-title">الإعدادات ⚙️</div>
+      </div>
+      <div class="settings-list">
+        <div class="setting-row">
+          <span class="setting-label">الأصوات والمؤثرات</span>
+          <button id="toggle-sound-btn" class="btn-action">🔊 تشغيل</button>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">نجوم السايبر المتحركة</span>
+          <button id="toggle-stars-btn" class="btn-action">✨ مفعل</button>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">مسح كل البيانات</span>
+          <button id="reset-data-btn" class="btn-action btn-danger">🗑️ تصفير</button>
+        </div>
+      </div>
+      <button class="close-btn-generic" onclick="closeSettings()">إغلاق ✖️</button>
+    </div>
+
+    <!-- Dynamic Shop Modal -->
+    <div id="shop-modal" class="modal-overlay">
+      <div class="modal-header">
+        <div class="modal-title">المتجر 🛒</div>
+        <div id="shop-coins-val" class="shop-coins">🪙 0</div>
+      </div>
+
+      <div id="shop-container" style="width: 100%;"></div>
+
+      <button class="close-btn-generic" onclick="closeShop()">رجوع ↩️</button>
+    </div>
+
+    <!-- Revive Modal -->
+    <div id="revive-modal">
+      <div class="revive-box">
+        <div style="font-size: 22px; font-weight: 900; color: #ffd700;">استخدام الإحياء؟</div>
+        
+        <div class="radial-timer-container" onclick="confirmRevive()">
+          <svg class="radial-svg">
+            <circle class="radial-bg" cx="60" cy="60" r="50"></circle>
+            <circle id="radial-progress-bar" class="radial-progress" cx="60" cy="60" r="50"></circle>
+          </svg>
+          <div class="radial-center-btn">💖</div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+          <button class="btn-action" style="background: #e74c3c; color: white; padding: 8px 24px;" onclick="skipRevive()">تخطي ⏩</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx.roundRect) {
+      ctx.roundRect = function (x, y, w, h, r) {
+        if (typeof r === 'number') r = {tl: r, tr: r, br: r, bl: r};
+        this.beginPath();
+        this.moveTo(x + r.tl, y);
+        this.lineTo(x + w - r.tr, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+        this.lineTo(x + w, y + h - r.br);
+        this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+        this.lineTo(x + r.bl, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+        this.lineTo(x, y + r.tl);
+        this.quadraticCurveTo(x, y, x + r.tl, y);
+        this.closePath();
+        return this;
+      };
+    }
+
+    // Single Unified Save File Structure Including Settings
+    const SAVE_KEY = "fb_save_v2";
+    const defaultData = {
+      coins: 0,
+      highScore: 0,
+      inventory: { revive: 0, doubleCoins: 0 },
+      unlockedSkins: { bird: ['classic'], bg: ['sunset'], pipe: ['classic'] },
+      activeSkins: { bird: 'classic', bg: 'sunset', pipe: 'classic' },
+      achievements: { score10: false, score25: false, score50: false },
+      settings: { muted: false, starsEnabled: true }
+    };
+
+    let gameData = loadGameData();
+
+    function loadGameData() {
+      try {
+        let saved = localStorage.getItem(SAVE_KEY);
+        if (saved) {
+          let parsed = JSON.parse(saved);
+          return {
+            ...defaultData,
+            ...parsed,
+            settings: { ...defaultData.settings, ...(parsed.settings || {}) },
+            inventory: { ...defaultData.inventory, ...(parsed.inventory || {}) },
+            unlockedSkins: { ...defaultData.unlockedSkins, ...(parsed.unlockedSkins || {}) },
+            activeSkins: { ...defaultData.activeSkins, ...(parsed.activeSkins || {}) },
+            achievements: { ...defaultData.achievements, ...(parsed.achievements || {}) }
+          };
+        }
+      } catch (e) {
+        console.error("Error loading save file", e);
+      }
+      return JSON.parse(JSON.stringify(defaultData));
+    }
+
+    function saveGameData() {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(gameData));
+      } catch (e) {
+        console.error("Error writing save file", e);
+      }
+    }
+
+    // Dynamic Shop Matrix
+    const SHOP_ITEMS = [
+      {
+        categoryTitle: "قدرات استهلاكية (Consumables)",
+        type: "consumable",
+        items: [
+          { id: "revive", name: "إحياء إضافي", icon: "💖", cost: 15 },
+          { id: "doubleCoins", name: "مضاعف 2X", icon: "✨", cost: 20 }
+        ]
+      },
+      {
+        categoryTitle: "سكنات العصفور",
+        type: "skin",
+        category: "bird",
+        items: [
+          { id: "classic", name: "كلاسيك", icon: "🐥", cost: 0 },
+          { id: "neon", name: "نيون", icon: "🤖", cost: 25 },
+          { id: "fire", name: "فينكس", icon: "🔥", cost: 60 }
+        ]
+      },
+      {
+        categoryTitle: "الخلفية",
+        type: "skin",
+        category: "bg",
+        items: [
+          { id: "sunset", name: "غروب", icon: "🌅", cost: 0 },
+          { id: "cyber", name: "سايبر", icon: "🌃", cost: 35 }
+        ]
+      },
+      {
+        categoryTitle: "الأنابيب",
+        type: "skin",
+        category: "pipe",
+        items: [
+          { id: "classic", name: "أخضر", icon: "🟩", cost: 0 },
+          { id: "crystal", name: "كريستال", icon: "💎", cost: 45 }
+        ]
+      }
+    ];
+
+    function updateSettingsUI() {
+      document.getElementById("toggle-sound-btn").innerText = gameData.settings.muted ? "🔇 كتم" : "🔊 تشغيل";
+      document.getElementById("toggle-stars-btn").innerText = gameData.settings.starsEnabled ? "✨ مفعل" : "❌ معطل";
+    }
+
+    function showToast(msg, color = "#e74c3c") {
+      document.querySelectorAll('.game-toast').forEach(t => t.remove());
+      let toast = document.createElement("div");
+      toast.className = "game-toast";
+      toast.textContent = msg;
+      toast.style.cssText = `
+        position: absolute; top: 115px; left: 50%; transform: translateX(-50%);
+        background: ${color}; color: white; padding: 10px 22px; border-radius: 20px;
+        font-weight: bold; font-size: 14px; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+        animation: toastFade 1.8s forwards; pointer-events: none;
+      `;
+      document.getElementById("game-wrapper").appendChild(toast);
+      setTimeout(() => toast.remove(), 1800);
+    }
+
+    const AudioFX = {
+      ctx: null,
+      init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      },
+      playFlap() {
+        if (!this.ctx || gameData.settings.muted) return;
+        let osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime); gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.08);
+      },
+      playScore() {
+        if (!this.ctx || gameData.settings.muted) return;
+        let osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime); gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.18);
+      },
+      playMilestone() {
+        if (!this.ctx || gameData.settings.muted) return;
+        let notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          let osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.06);
+          gain.gain.setValueAtTime(0.15, this.ctx.currentTime + idx * 0.06);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.06 + 0.12);
+          osc.start(this.ctx.currentTime + idx * 0.06); osc.stop(this.ctx.currentTime + idx * 0.06 + 0.12);
+        });
+      },
+      playRevive() {
+        if (!this.ctx || gameData.settings.muted) return;
+        let notes = [261.63, 329.63, 392.00, 523.25];
+        notes.forEach((freq, idx) => {
+          let osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.08);
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.08);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.08 + 0.15);
+          osc.start(this.ctx.currentTime + idx * 0.08); osc.stop(this.ctx.currentTime + idx * 0.08 + 0.15);
+        });
+      },
+      playHit() {
+        if (!this.ctx || gameData.settings.muted) return;
+        let osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime); gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.2);
+      }
+    };
+
+    let previousHighScore = gameData.highScore;
+
+    let gameState = "START"; 
+    let manualPaused = false;
+    let revivePaused = false;
+    let isShopOpen = false;
+    let isSettingsOpen = false;
+    let isRevivePromptActive = false;
+
+    let score = 0;
+    let coinsCollectedSession = 0;
+    let usedRevive = false;
+    let activeDoubleCoins = false;
+    let isNewRecord = false;
+
+    let lastTime = performance.now();
+    let shakeTime = 0;
+    let bgOffset = 0, cloudOffset = 0;
+    
+    let reviveStartTime = 0;
+    let reviveDuration = 5000;
+    let reviveAnimFrame = null;
+
+    let comboEffects = [];
+
+    function triggerComboFX(x, y) {
+      comboEffects.push({ x: x, y: y, radius: 10, maxRadius: 60, alpha: 1, textY: y - 20 });
+      spawnParticles(x, y, 30, "#00f2fe"); spawnParticles(x, y, 20, "#ffd700");
+    }
+
+    function updateAndDrawComboFX(dt) {
+      for (let i = comboEffects.length - 1; i >= 0; i--) {
+        let fx = comboEffects[i];
+        fx.radius += 100 * dt; fx.alpha -= 1.2 * dt; fx.textY -= 40 * dt;
+        if (fx.alpha <= 0) { comboEffects.splice(i, 1); continue; }
+
+        ctx.save(); ctx.globalAlpha = Math.max(0, fx.alpha);
+        ctx.strokeStyle = "#00f2fe"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2); ctx.stroke();
+        ctx.font = "900 20px 'Segoe UI', sans-serif"; ctx.fillStyle = "#ffd700";
+        ctx.textAlign = "center"; ctx.shadowColor = "#ff0055"; ctx.shadowBlur = 10;
+        ctx.fillText("🔥 COMBO +5!", fx.x, fx.textY); ctx.restore();
+      }
+    }
+
+    const MAX_PARTICLES = 150;
+    const particlePool = [];
+    for (let i = 0; i < MAX_PARTICLES; i++) {
+      particlePool.push({ x: 0, y: 0, vx: 0, vy: 0, radius: 0, color: '#fff', alpha: 0, life: 0, active: false });
+    }
+
+    function spawnParticles(x, y, count, color) {
+      let spawned = 0;
+      for (let i = 0; i < MAX_PARTICLES; i++) {
+        let p = particlePool[i];
+        if (!p.active) {
+          p.x = x; p.y = y; p.vx = (Math.random() - 0.5) * 240; p.vy = (Math.random() - 0.5) * 240;
+          p.radius = Math.random() * 4 + 2; p.color = color; p.alpha = 1; p.life = Math.random() * 0.4 + 0.2;
+          p.active = true; spawned++;
+          if (spawned >= count) break;
+        }
+      }
+    }
+
+    function updateAndDrawParticles(dt) {
+      for (let i = 0; i < MAX_PARTICLES; i++) {
+        let p = particlePool[i];
+        if (p.active) {
+          p.x += p.vx * dt; p.y += p.vy * dt; p.alpha -= dt / p.life;
+          if (p.alpha <= 0) p.active = false;
+          else {
+            ctx.save(); ctx.globalAlpha = Math.max(0, p.alpha); ctx.fillStyle = p.color;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+          }
+        }
+      }
+    }
+
+    function getGap() { return Math.max(115, 155 - score * 1.5); }
+    function getSpeed() { return 180 + Math.min(130, score * 4); }
+
+    const bird = {
+      x: 80, y: 300, radius: 18, velocity: 0, gravity: 1200, jumpForce: -420, rotation: 0, wingAngle: 0,
+      reset() { this.y = 300; this.velocity = 0; this.rotation = 0; },
+      flap() {
+        this.velocity = this.jumpForce; AudioFX.playFlap();
+        let color = gameData.activeSkins.bird === 'neon' ? "#00f2fe" : (gameData.activeSkins.bird === 'fire' ? "#ff0055" : "#ffffff");
+        spawnParticles(this.x - 10, this.y + 10, 8, color);
+      },
+      update(dt) {
+        if (gameState === "PLAYING" && !manualPaused && !revivePaused) {
+          this.velocity += this.gravity * dt; this.y += this.velocity * dt;
+          let targetRot = Math.min(Math.PI / 4, Math.max(-Math.PI / 6, (this.velocity / 500) * (Math.PI / 4)));
+          this.rotation += (targetRot - this.rotation) * 10 * dt; this.wingAngle += 15 * dt;
+
+          if (this.y + this.radius >= canvas.height - 70) {
+            this.y = canvas.height - 70 - this.radius; triggerGameOver("ground");
+          }
+          if (this.y - this.radius <= 0) { this.y = this.radius; this.velocity = 0; }
+        } else if (gameState === "START") {
+          this.y = 300 + Math.sin(performance.now() / 200) * 8; this.wingAngle += 8 * dt; this.rotation = 0;
+        }
+      },
+      draw() {
+        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation);
+        if (gameData.activeSkins.bird === 'neon') { ctx.shadowColor = "#00f2fe"; ctx.shadowBlur = 15; }
+        else if (gameData.activeSkins.bird === 'fire') { ctx.shadowColor = "#ff0055"; ctx.shadowBlur = 20; }
+
+        let mainColor = "#ffe600", subColor = "#ff9900";
+        if (gameData.activeSkins.bird === 'neon') { mainColor = "#00f2fe"; subColor = "#4facfe"; }
+        else if (gameData.activeSkins.bird === 'fire') { mainColor = "#ff0055"; subColor = "#ff5000"; }
+
+        let grad = ctx.createRadialGradient(-4, -4, 2, 0, 0, this.radius);
+        grad.addColorStop(0, mainColor); grad.addColorStop(1, subColor);
+
+        ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = grad; ctx.fill(); ctx.lineWidth = 2;
+        ctx.strokeStyle = gameData.activeSkins.bird === 'classic' ? "#552200" : "#ffffff"; ctx.stroke();
+
+        let wingY = Math.sin(this.wingAngle) * 8;
+        ctx.beginPath(); ctx.ellipse(-6, wingY, 10, 6, Math.PI / 8, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff"; ctx.fill();
+
+        ctx.beginPath(); ctx.arc(8, -6, 6, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill();
+        ctx.beginPath(); ctx.arc(10, -6, 2.5, 0, Math.PI * 2); ctx.fillStyle = "#000000"; ctx.fill();
+
+        ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(24, 4); ctx.lineTo(12, 10); ctx.closePath();
+        ctx.fillStyle = gameData.activeSkins.bird === 'fire' ? "#ffff00" : "#ff3300"; ctx.fill(); ctx.restore();
+      }
+    };
+
+    const pipes = {
+      list: [], coins: [], spawnTimer: 0, spawnRate: 1.5, width: 68,
+      reset() { this.list = []; this.coins = []; this.spawnTimer = 0; },
+      update(dt) {
+        if (gameState !== "PLAYING" || manualPaused || revivePaused) return;
+
+        let speed = getSpeed(), currentGap = getGap();
+        this.spawnTimer += dt;
+
+        if (this.spawnTimer >= this.spawnRate) {
+          this.spawnTimer = 0;
+          let minH = 80, maxH = canvas.height - 70 - currentGap - minH;
+          let topH = Math.floor(Math.random() * (maxH - minH + 1)) + minH;
+          this.list.push({ x: canvas.width, top: topH, bottom: topH + currentGap, passed: false });
+
+          if (Math.random() > 0.6) {
+            this.coins.push({ x: canvas.width + this.width / 2, y: topH + currentGap / 2, radius: 10, collected: false });
+          }
+        }
+
+        for (let i = 0; i < this.list.length; i++) {
+          let p = this.list[i]; p.x -= speed * dt;
+          let b = bird;
+
+          if (b.x + b.radius - 4 > p.x && b.x - b.radius + 4 < p.x + this.width) {
+            if (b.y - b.radius + 4 < p.top || b.y + b.radius - 4 > p.bottom) triggerGameOver("pipe");
+          }
+
+          if (p.x + this.width < b.x && !p.passed) {
+            p.passed = true; score++;
+            if (score > previousHighScore && previousHighScore > 0 && !isNewRecord) {
+              showToast("🏆 رقم قياسي جديد!", "#f39c12");
+              isNewRecord = true;
+            }
+            if (score > gameData.highScore) {
+              gameData.highScore = score; saveGameData();
+            }
+
+            checkAchievements();
+
+            if (score % 5 === 0) { AudioFX.playMilestone(); spawnParticles(b.x, b.y, 35, "#00f2fe"); }
+            else { AudioFX.playScore(); spawnParticles(b.x, b.y, 10, "#4ecdc4"); }
+          }
+          if (p.x + this.width < 0) { this.list.splice(i, 1); i--; }
+        }
+
+        for (let i = 0; i < this.coins.length; i++) {
+          let c = this.coins[i]; c.x -= speed * dt;
+          if (Math.hypot(bird.x - c.x, bird.y - c.y) < bird.radius + c.radius && !c.collected) {
+            c.collected = true;
+            let earned = activeDoubleCoins ? 2 : 1;
+            coinsCollectedSession += earned; gameData.coins += earned;
+            saveGameData();
+            AudioFX.playScore(); spawnParticles(c.x, c.y, 12, "#ffd700");
+
+            if (coinsCollectedSession > 0 && coinsCollectedSession % 5 === 0) {
+              gameData.coins += 5; saveGameData();
+              triggerComboFX(bird.x, bird.y); AudioFX.playMilestone();
+            }
+          }
+          if (c.x + c.radius < 0 || c.collected) { this.coins.splice(i, 1); i--; }
+        }
+      },
+      draw() {
+        for (let p of this.list) {
+          this.drawPipe(p.x, 0, this.width, p.top, true);
+          this.drawPipe(p.x, p.bottom, this.width, canvas.height - 70 - p.bottom, false);
+        }
+        for (let c of this.coins) {
+          ctx.save(); ctx.shadowColor = "#ffd700"; ctx.shadowBlur = 10;
+          ctx.beginPath(); ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+          ctx.fillStyle = "#ffd700"; ctx.fill(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+          ctx.restore();
+        }
+      },
+      drawPipe(x, y, w, h, isTop) {
+        ctx.save(); ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+        if (gameData.activeSkins.pipe === 'crystal') { ctx.shadowColor = "#00f2fe"; ctx.shadowBlur = 12; }
+
+        let grad = ctx.createLinearGradient(x, 0, x + w, 0);
+        if (gameData.activeSkins.pipe === 'crystal') {
+          grad.addColorStop(0, "#00c6ff"); grad.addColorStop(0.5, "#0072ff"); grad.addColorStop(1, "#00264d");
+        } else {
+          grad.addColorStop(0, "#2ecc71"); grad.addColorStop(0.5, "#a8e6cf"); grad.addColorStop(1, "#1e824c");
+        }
+
+        ctx.fillStyle = grad; ctx.fillRect(x, y, w, h);
+        let capH = 22, capY = isTop ? y + h - capH : y;
+        ctx.fillStyle = gameData.activeSkins.pipe === 'crystal' ? "#00c6ff" : "#27ae60";
+        ctx.fillRect(x - 4, capY, w + 8, capH);
+        ctx.strokeStyle = gameData.activeSkins.pipe === 'crystal' ? "#ffffff" : "#145a32";
+        ctx.lineWidth = 2; ctx.strokeRect(x - 4, capY, w + 8, capH); ctx.restore();
+      }
+    };
+
+    function checkAchievements() {
+      let changed = false;
+      if (score >= 10 && !gameData.achievements.score10) { gameData.achievements.score10 = true; gameData.coins += 10; showToast("🏆 إنجاز: 10 نقاط! (+10 🪙)", "#f39c12"); changed = true; }
+      if (score >= 25 && !gameData.achievements.score25) { gameData.achievements.score25 = true; gameData.coins += 25; showToast("🏆 إنجاز: 25 نقطة! (+25 🪙)", "#f39c12"); changed = true; }
+      if (score >= 50 && !gameData.achievements.score50) { gameData.achievements.score50 = true; gameData.coins += 50; showToast("🏆 إنجاز: 50 نقطة! (+50 🪙)", "#f39c12"); changed = true; }
+
+      if (changed) saveGameData();
+    }
+
+    function drawBackground(dt) {
+      if (gameState !== "GAMEOVER" && !manualPaused && !revivePaused) {
+        bgOffset = (bgOffset + 30 * dt) % canvas.width;
+        cloudOffset = (cloudOffset + 15 * dt) % canvas.width;
+      }
+
+      let sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      if (gameData.activeSkins.bg === 'cyber') {
+        sky.addColorStop(0, "#0d0221"); sky.addColorStop(0.5, "#261447"); sky.addColorStop(1, "#ff3864");
+      } else {
+        sky.addColorStop(0, "#1a2a6c"); sky.addColorStop(0.5, "#b21f1f"); sky.addColorStop(1, "#fdbb2d");
+      }
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (gameData.activeSkins.bg === 'cyber' && gameData.settings.starsEnabled) {
+        ctx.save();
+        for (let i = 0; i < 20; i++) {
+          let sx = (i * 137 + bgOffset * 2) % canvas.width;
+          let sy = (i * 73) % (canvas.height - 70);
+          ctx.fillStyle = "rgba(255, 255, 255, " + (0.3 + Math.sin(i + performance.now() / 500) * 0.3) + ")";
+          ctx.beginPath(); ctx.arc(sx, sy, 2, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      ctx.fillStyle = gameData.activeSkins.bg === 'cyber' ? "rgba(0, 242, 254, 0.15)" : "rgba(255, 255, 255, 0.25)";
+      for (let i = -1; i < 2; i++) {
+        let cx = i * canvas.width - cloudOffset;
+        ctx.beginPath(); ctx.arc(cx + 80, 120, 30, 0, Math.PI * 2);
+        ctx.arc(cx + 110, 100, 45, 0, Math.PI * 2); ctx.arc(cx + 150, 120, 35, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      let groundY = canvas.height - 70;
+      ctx.fillStyle = gameData.activeSkins.bg === 'cyber' ? "#120a2a" : "#2d1300";
+      ctx.fillRect(0, groundY, canvas.width, 70);
+      ctx.fillStyle = gameData.activeSkins.bg === 'cyber' ? "#ff0055" : "#00e676";
+      ctx.fillRect(0, groundY, canvas.width, 12);
+    }
+
+    function drawUI() {
+      ctx.save();
+      if (gameState === "PLAYING") {
+        ctx.font = "900 48px 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#ffffff"; ctx.textAlign = "center";
+        ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 8;
+        ctx.fillText(score, canvas.width / 2, 80);
+
+        let currentLevel = Math.floor(score / 10) + 1;
+        ctx.font = "700 14px 'Segoe UI', sans-serif"; ctx.fillStyle = "#00f2fe";
+        ctx.fillText(`المستوى ${currentLevel}`, canvas.width / 2, 105);
+
+        let hudOffset = 20;
+        if (activeDoubleCoins) {
+          ctx.font = "700 13px 'Segoe UI', sans-serif"; ctx.fillStyle = "#ffd700";
+          ctx.textAlign = "left"; ctx.fillText("✨ 2X مُفعَّل", hudOffset, 125);
+        }
+        if (gameData.inventory.revive > 0) {
+          ctx.font = "700 13px 'Segoe UI', sans-serif"; ctx.fillStyle = "#ff0055";
+          ctx.textAlign = "left"; ctx.fillText(`💖 x${gameData.inventory.revive}`, hudOffset, 145);
+        }
+
+        ctx.font = "700 16px 'Segoe UI', sans-serif"; ctx.fillStyle = "#ffd700";
+        ctx.textAlign = "right"; ctx.fillText(`🪙 ${gameData.coins}`, canvas.width - 20, 35);
+
+      } else if (gameState === "START") {
+        ctx.font = "900 34px 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#ffffff"; ctx.textAlign = "center";
+        ctx.shadowColor = "#00f2fe"; ctx.shadowBlur = 12;
+        ctx.fillText("FLAPPY BIRD", canvas.width / 2, 180);
+
+        ctx.font = "600 18px 'Segoe UI', sans-serif"; ctx.shadowBlur = 0;
+        ctx.fillText("اضغط أو المسافة للبدء", canvas.width / 2, 420);
+        ctx.fillStyle = "#ffd700";
+        ctx.fillText(`إجمالي الكوينز: 🪙 ${gameData.coins}`, canvas.width / 2, 460);
+
+        document.getElementById("open-shop-btn").style.display = "block";
+
+      } else if (gameState === "GAMEOVER") {
+        ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        let boxW = 290, boxH = 220;
+        let boxX = (canvas.width - boxW) / 2, boxY = (canvas.height - boxH) / 2 - 20;
+
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)"; ctx.shadowBlur = 20;
+        ctx.fillStyle = "#ffffff"; ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, 16); ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.font = "900 24px 'Segoe UI', sans-serif"; ctx.fillStyle = "#ff0055";
+        ctx.textAlign = "center"; ctx.fillText("انتهت اللعبة!", canvas.width / 2, boxY + 35);
+
+        if (isNewRecord) {
+          ctx.font = "700 13px 'Segoe UI', sans-serif"; ctx.fillStyle = "#27ae60";
+          ctx.fillText("🎉 رقم قياسي جديد!", canvas.width / 2, boxY + 58);
+        }
+
+        ctx.font = "600 16px 'Segoe UI', sans-serif"; ctx.fillStyle = "#222222";
+        ctx.fillText(`النتيجة: ${score}`, canvas.width / 2, boxY + 92);
+        ctx.fillStyle = "#ffaa00"; ctx.fillText(`أعلى نتيجة: ${gameData.highScore}`, canvas.width / 2, boxY + 122);
+        ctx.fillStyle = "#27ae60"; ctx.fillText(`الكوينز الجمَّعة: 🪙 ${coinsCollectedSession}`, canvas.width / 2, boxY + 152);
+
+        ctx.font = "600 16px 'Segoe UI', sans-serif"; ctx.fillStyle = "#ffffff";
+        ctx.fillText("انقر لإعادة اللعب", canvas.width / 2, boxY + boxH + 45);
+
+        document.getElementById("open-shop-btn").style.display = "block";
+      }
+
+      if (manualPaused) {
+        ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#ffffff"; ctx.font = "900 28px 'Segoe UI', sans-serif";
+        ctx.textAlign = "center"; ctx.fillText("⏸️ اللعبة متوقفة مؤقتاً", canvas.width / 2, canvas.height / 2);
+      }
+      ctx.restore();
+    }
+
+    function triggerGameOver(cause = "pipe") {
+      if (cause === "pipe" && !usedRevive && gameData.inventory.revive > 0) {
+        startReviveCountdown();
+        return;
+      }
+      executeGameOver();
+    }
+
+    function executeGameOver() {
+      if (gameState !== "GAMEOVER") {
+        gameState = "GAMEOVER";
+        usedRevive = false;
+        isNewRecord = false; // Protective Reset
+        shakeTime = 0.25;
+        comboEffects = [];
+        AudioFX.playHit();
+        spawnParticles(bird.x, bird.y, 25, "#ff0055");
+      }
+    }
+
+    function startReviveCountdown() {
+      if (!isRevivePromptActive) {
+        isRevivePromptActive = true;
+        revivePaused = true;
+        document.getElementById("revive-modal").style.display = "flex";
+        
+        reviveStartTime = performance.now();
+        updateRadialProgress();
+      }
+    }
+
+    function updateRadialProgress() {
+      if (!isRevivePromptActive) return;
+      
+      let elapsed = performance.now() - reviveStartTime;
+      let remainingRatio = Math.max(0, (reviveDuration - elapsed) / reviveDuration);
+      
+      let circleCircumference = 314;
+      let offset = circleCircumference * (1 - remainingRatio);
+      document.getElementById("radial-progress-bar").style.strokeDashoffset = offset;
+
+      if (elapsed >= reviveDuration) {
+        skipRevive();
+      } else {
+        reviveAnimFrame = requestAnimationFrame(updateRadialProgress);
+      }
+    }
+
+    function confirmRevive() {
+      if (!isRevivePromptActive) return;
+      isRevivePromptActive = false;
+      cancelAnimationFrame(reviveAnimFrame);
+      document.getElementById("revive-modal").style.display = "none";
+      revivePaused = false;
+
+      gameData.inventory.revive--; 
+      usedRevive = true;
+      saveGameData();
+
+      AudioFX.playRevive();
+      showToast("💖 تم استخدام الإحياء بنجاح!", "#9b59b6");
+
+      bird.y = 220; bird.velocity = -200;
+      pipes.list = pipes.list.filter(p => p.x > bird.x + 150);
+    }
+
+    function skipRevive() {
+      if (!isRevivePromptActive) return;
+      isRevivePromptActive = false;
+      cancelAnimationFrame(reviveAnimFrame);
+      document.getElementById("revive-modal").style.display = "none";
+      revivePaused = false;
+      executeGameOver();
+    }
+
+    function handleAction() {
+      if (isShopOpen || isSettingsOpen || isRevivePromptActive || manualPaused) return;
+
+      AudioFX.init();
+      if (gameState === "START") {
+        gameState = "PLAYING";
+        score = 0; coinsCollectedSession = 0;
+        usedRevive = false; isNewRecord = false;
+        previousHighScore = gameData.highScore;
+        
+        if (gameData.inventory.doubleCoins > 0) {
+          gameData.inventory.doubleCoins--; activeDoubleCoins = true;
+          saveGameData();
+          showToast("✨ تم تفعيل مضاعف الكوينز 2X!", "#f39c12");
+        } else { activeDoubleCoins = false; }
+
+        bird.reset(); pipes.reset();
+        document.getElementById("open-shop-btn").style.display = "none";
+        bird.flap();
+      } else if (gameState === "PLAYING") {
+        bird.flap();
+      } else if (gameState === "GAMEOVER") {
+        pipes.reset(); bird.reset();
+        score = 0; coinsCollectedSession = 0;
+        usedRevive = false; isNewRecord = false;
+        previousHighScore = gameData.highScore;
+
+        if (gameData.inventory.doubleCoins > 0) {
+          gameData.inventory.doubleCoins--; activeDoubleCoins = true;
+          saveGameData();
+          showToast("✨ تم تفعيل مضاعف الكوينز 2X!", "#f39c12");
+        } else { activeDoubleCoins = false; }
+
+        gameState = "PLAYING";
+        document.getElementById("open-shop-btn").style.display = "none";
+        bird.flap();
+      }
+    }
+
+    // Manual Pause Listener
+    document.getElementById("manual-pause-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (gameState === "PLAYING" && !isRevivePromptActive) {
+        manualPaused = !manualPaused;
+        document.getElementById("manual-pause-btn").innerText = manualPaused ? "▶️" : "⏸️";
+      }
+    });
+
+    // Settings Listener - Auto Pause Game
+    document.getElementById("settings-btn").addEventListener("click", (e) => {
+      e.stopPropagation(); isSettingsOpen = true;
+      if (gameState === "PLAYING") {
+        manualPaused = true;
+        document.getElementById("manual-pause-btn").innerText = "▶️";
+      }
+      document.getElementById("settings-modal").style.display = "flex";
+    });
+
+    function closeSettings() {
+      isSettingsOpen = false;
+      document.getElementById("settings-modal").style.display = "none";
+    }
+
+    // Settings Handlers with Persistent Saving
+    document.getElementById("toggle-sound-btn").addEventListener("click", () => {
+      gameData.settings.muted = !gameData.settings.muted;
+      saveGameData(); updateSettingsUI();
+    });
+
+    document.getElementById("toggle-stars-btn").addEventListener("click", () => {
+      gameData.settings.starsEnabled = !gameData.settings.starsEnabled;
+      saveGameData(); updateSettingsUI();
+    });
+
+    document.getElementById("reset-data-btn").addEventListener("click", () => {
+      if (confirm("هل أنت تأكد من إعادة ضبط كل التقدم والكوينز والسكنات؟")) {
+        localStorage.removeItem(SAVE_KEY); location.reload();
+      }
+    });
+
+    // Dynamic Shop Modal
+    document.getElementById("open-shop-btn").addEventListener("click", (e) => {
+      e.stopPropagation(); isShopOpen = true; renderDynamicShop();
+      document.getElementById("shop-modal").style.display = "flex";
+    });
+
+    function closeShop() {
+      isShopOpen = false;
+      document.getElementById("shop-modal").style.display = "none";
+    }
+
+    function renderDynamicShop() {
+      document.getElementById("shop-coins-val").innerText = `🪙 ${gameData.coins}`;
+      const container = document.getElementById("shop-container");
+      container.innerHTML = "";
+
+      SHOP_ITEMS.forEach(section => {
+        let secDiv = document.createElement("div");
+        secDiv.className = "shop-section";
+
+        let titleDiv = document.createElement("div");
+        titleDiv.className = "section-title";
+        titleDiv.innerText = section.categoryTitle;
+        secDiv.appendChild(titleDiv);
+
+        let gridDiv = document.createElement("div");
+        gridDiv.className = "shop-grid";
+
+        section.items.forEach(item => {
+          let itemDiv = document.createElement("div");
+          itemDiv.className = "shop-item";
+
+          let iconDiv = document.createElement("div");
+          iconDiv.style.fontSize = "24px";
+          iconDiv.innerText = item.icon;
+
+          let nameDiv = document.createElement("div");
+          nameDiv.className = "item-name";
+          nameDiv.innerText = item.name;
+
+          let costDiv = document.createElement("div");
+          costDiv.className = "item-cost";
+
+          if (section.type === "consumable") {
+            let ownedQty = gameData.inventory[item.id] || 0;
+            costDiv.innerText = `المملوك: ${ownedQty} (🪙${item.cost})`;
+            itemDiv.onclick = () => buyConsumable(item.id, item.cost);
+          } else if (section.type === "skin") {
+            let cat = section.category;
+            let isUnlocked = gameData.unlockedSkins[cat].includes(item.id);
+            let isActive = gameData.activeSkins[cat] === item.id;
+
+            if (isActive) itemDiv.classList.add("active");
+
+            if (isUnlocked) {
+              costDiv.innerText = isActive ? "مفعل" : "مملوك";
+              itemDiv.onclick = () => selectSkin(cat, item.id);
+            } else {
+              costDiv.innerText = `🪙 ${item.cost}`;
+              itemDiv.onclick = () => buyOrSelectSkin(cat, item.id, item.cost);
+            }
+          }
+
+          itemDiv.appendChild(iconDiv);
+          itemDiv.appendChild(nameDiv);
+          itemDiv.appendChild(costDiv);
+          gridDiv.appendChild(itemDiv);
+        });
+
+        secDiv.appendChild(gridDiv);
+        container.appendChild(secDiv);
+      });
+    }
+
+    function buyConsumable(id, cost) {
+      if (gameData.coins >= cost) {
+        gameData.coins -= cost;
+        gameData.inventory[id] = (gameData.inventory[id] || 0) + 1;
+        saveGameData();
+        showToast("🎉 تم الشراء بنجاح!", "#27ae60");
+        renderDynamicShop();
+      } else {
+        showToast("🪙 الكوينز غير كافية!", "#e74c3c");
+      }
+    }
+
+    function buyOrSelectSkin(category, id, cost) {
+      if (gameData.coins >= cost) {
+        gameData.coins -= cost;
+        gameData.unlockedSkins[category].push(id);
+        gameData.activeSkins[category] = id;
+        saveGameData();
+        showToast("🎉 تم الفتح والتفعيل بنجاح!", "#27ae60");
+        renderDynamicShop();
+      } else {
+        showToast("🪙 الكوينز غير كافية!", "#e74c3c");
+      }
+    }
+
+    function selectSkin(category, id) {
+      gameData.activeSkins[category] = id;
+      saveGameData();
+      renderDynamicShop();
+    }
+
+    window.addEventListener("keydown", (e) => { if (e.code === "Space") { e.preventDefault(); handleAction(); } });
+    canvas.addEventListener("pointerdown", (e) => { e.preventDefault(); handleAction(); });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && gameState === "PLAYING") {
+        manualPaused = true;
+        document.getElementById("manual-pause-btn").innerText = "▶️";
+      } else if (!document.hidden) {
+        lastTime = performance.now();
+      }
+    });
+
+    window.addEventListener("load", () => {
+      updateSettingsUI();
+    });
+
+    function gameLoop(timestamp) {
+      let dt = (timestamp - lastTime) / 1000;
+      if (isNaN(dt) || dt > 0.1) dt = 0.016;
+      lastTime = timestamp;
+
+      ctx.shadowBlur = 0; ctx.shadowColor = "transparent"; ctx.globalAlpha = 1;
+      ctx.save();
+      if (shakeTime > 0) {
+        shakeTime -= dt;
+        ctx.translate((Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12);
+      }
+
+      drawBackground(dt);
+      if (!manualPaused && !revivePaused) { pipes.update(dt); bird.update(dt); }
+      pipes.draw();
+      bird.draw();
+      updateAndDrawComboFX(dt);
+      updateAndDrawParticles(dt);
+      drawUI();
+
+      ctx.restore();
+      requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
